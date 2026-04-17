@@ -1,17 +1,140 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Cartoon App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartoonification Studio</title>
+    <style>
+                /* This targets the dropdown list itself */
+        select option {
+            background-color: #0c1a25; /* Match your dark dashboard color */
+            color: white;              /* Make sure text is white */
+            padding: 10px;
+        }
+
+        /* This helps on some browsers like Chrome/Safari */
+        select:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        :root { --glass: rgba(255, 255, 255, 0.1); --text: #f0faff; }
+
+        /* 🌌 Aurora Background Engine */
+        body {
+            margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at 50% 50%, #081218 0%, #020507 100%);
+            color: var(--text); overflow-x: hidden;
+        }
+
+        body::before, body::after {
+            content: ""; position: absolute; width: 140%; height: 140%; top: -20%; left: -20%;
+            z-index: -1; opacity: 0.5;
+            background: radial-gradient(circle at 50% 50%, #00d2ff, #3a7bd5, transparent 50%);
+            filter: blur(100px); animation: drift 25s infinite alternate ease-in-out;
+        }
+        body::after {
+            background: radial-gradient(circle at 80% 20%, #2af598, transparent 45%);
+            animation-duration: 18s; animation-delay: -5s;
+        }
+
+        @keyframes drift {
+            from { transform: rotate(0deg) translateY(0); }
+            to { transform: rotate(8deg) translateY(-50px); }
+        }
+
+        /* 🖼️ Dashboard Container */
+        .container {
+            background: rgba(15, 25, 35, 0.65); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 28px;
+            padding: 40px; width: 90%; max-width: 800px; text-align: center;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+        }
+
+        h1 { font-size: 2.8rem; margin-bottom: 5px; color: #fff; text-shadow: 0 0 20px rgba(0, 210, 255, 0.4); }
+        .subtitle { color: #a5f3fc; opacity: 0.8; margin-bottom: 30px; }
+
+        /* 📂 Interactive Upload Area */
+        #drop-area {
+            border: 2px dashed rgba(255, 255, 255, 0.2); border-radius: 20px;
+            padding: 40px; margin: 25px 0; background: rgba(255, 255, 255, 0.03);
+            transition: 0.3s; cursor: pointer;
+        }
+        #drop-area.highlight { border-color: #00d2ff; background: rgba(0, 210, 255, 0.05); }
+
+        /* ⚙️ Controls */
+        select, button {
+            padding: 12px 24px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); margin: 5px;
+        }
+        select { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); }
+        button { background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); color: white; }
+        button:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0, 210, 255, 0.3); }
+        .reset-btn { background: rgba(255, 255, 255, 0.1); }
+
+        /* 📸 Results */
+        .result-box { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px; }
+        .res-img { width: 100%; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); transition: 0.3s; }
+        .res-img:hover { transform: scale(1.02); }
+
+        #fileElem { display: none; }
+    </style>
 </head>
-<body style="text-align:center; font-family:Arial;">
+<body>
 
-    <h1>🎨 Cartoonification App</h1>
+<div class="container">
+    <h1>🎨 Cartoonification Studio</h1>
+    <p class="subtitle">AI-powered image stylization using OpenCV</p>
 
+    {% if not original_file %}
     <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="image" required>
-        <br><br>
-        <button type="submit">Cartoonify & Download</button>
+        <div id="drop-area" onclick="document.getElementById('fileElem').click()">
+            <p style="font-size: 30px;">🌌</p>
+            <p id="file-name">Drop an image here or click to browse</p>
+            <input type="file" name="image" id="fileElem" required onchange="showName()">
+        </div>
+        <select name="filter">
+            <option value="Cartoon">Cartoon Filter</option>
+            <option value="Sketch">Sketch Filter</option>
+        </select>
+        <button type="submit">✨ Apply Filter</button>
     </form>
+    {% endif %}
+
+    {% if original_file %}
+    <div class="result-box">
+        <div><p>Original</p><img src="{{ url_for('static', filename=original_file) }}" class="res-img"></div>
+        <div><p>Output</p><img src="{{ url_for('static', filename=output_file) }}" class="res-img"></div>
+    </div>
+    <div style="margin-top: 30px;">
+        <a href="{{ url_for('static', filename=output_file) }}" download><button>💾 Download</button></a>
+        <a href="/"><button class="reset-btn">🔄 Try Another</button></a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function showName() {
+        const input = document.getElementById('fileElem');
+        document.getElementById('file-name').innerText = input.files[0].name;
+    }
+    // Simple Drag & Drop Logic
+    const area = document.getElementById('drop-area');
+    if(area) {
+        ['dragover', 'dragleave', 'drop'].forEach(e => {
+            area.addEventListener(e, (ev) => {
+                ev.preventDefault();
+                if(e === 'dragover') area.classList.add('highlight');
+                else area.classList.remove('highlight');
+            });
+        });
+        area.addEventListener('drop', (e) => {
+            document.getElementById('fileElem').files = e.dataTransfer.files;
+            showName();
+        });
+    }
+</script>
 
 </body>
 </html>
